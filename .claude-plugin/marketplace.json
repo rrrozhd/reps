@@ -1,0 +1,13 @@
+{
+  "name": "reps",
+  "owner": { "name": "rrrozhd" },
+  "description": "Interview-practice harness + drill-authoring skill.",
+  "plugins": [
+    {
+      "name": "reps",
+      "source": "./",
+      "version": "0.2.0",
+      "description": "The reps drill-authoring skill: generate verified progressive coding drills for the harness."
+    }
+  ]
+}

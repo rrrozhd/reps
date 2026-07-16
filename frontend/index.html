@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>reps — interview practice</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◧</span>
+      <span class="brand-name">reps</span>
+      <span class="brand-sub">interview practice</span>
+    </div>
+
+    <div class="drill-picker">
+      <label class="sr-only" for="drill-select">Drill</label>
+      <select id="drill-select" title="Choose a drill"></select>
+      <span id="drill-diff" class="pill muted"></span>
+    </div>
+
+    <div class="topbar-right">
+      <div class="timer" id="timer" title="90-minute ICA clock">
+        <span class="timer-face" id="timer-face">90:00</span>
+        <button class="tbtn" id="timer-toggle" title="Start / pause">▶</button>
+        <button class="tbtn" id="timer-reset" title="Reset to 90:00">↺</button>
+      </div>
+      <button class="btn ghost" id="btn-coach" title="Ask the agent for problems or explanations">✦ Coach</button>
+      <button class="btn ghost" id="btn-reset" title="Restore starter code">Reset code</button>
+      <button class="btn ghost" id="btn-ref" title="Peek at a reference solution">Reference</button>
+      <button class="btn primary" id="btn-run" title="Run tests (⌘/Ctrl + Enter)">
+        <span class="run-label">Run</span> <kbd>⌘↵</kbd>
+      </button>
+    </div>
+  </header>
+
+  <main class="workbench" id="workbench">
+    <!-- Task -->
+    <section class="pane pane-task" id="pane-task">
+      <div class="pane-head">
+        <h2 id="task-title">Task</h2>
+      </div>
+      <div class="pane-body task" id="task-body"></div>
+    </section>
+
+    <div class="gutter" id="gutter-left" data-side="left"></div>
+
+    <!-- Editor -->
+    <section class="pane pane-editor">
+      <div class="pane-head editor-head">
+        <span class="lang-badge">Python 3</span>
+        <span class="save-state" id="save-state">saved</span>
+        <span class="lint-state" id="lint-state"></span>
+      </div>
+      <div id="editor" class="editor-host"></div>
+    </section>
+
+    <div class="gutter" id="gutter-right" data-side="right"></div>
+
+    <!-- Results -->
+    <section class="pane pane-results" id="pane-results">
+      <div class="pane-head tabs">
+        <button class="tab active" data-tab="results" id="tab-results">Results</button>
+        <button class="tab" data-tab="fs" id="tab-fs" hidden>Filesystem</button>
+        <button class="tab" data-tab="coach" id="tab-coach">✦ Coach</button>
+      </div>
+      <div class="pane-body">
+        <div id="panel-results" class="panel">
+          <div class="empty" id="results-empty">
+            <p>Read all levels first. Design your state object. Then
+              <strong>Run</strong> (<kbd>⌘↵</kbd>) to test each level.</p>
+          </div>
+          <div id="results-content"></div>
+        </div>
+        <div id="panel-fs" class="panel" hidden>
+          <div class="empty" id="fs-empty"><p>Run your code to render the filesystem it builds.</p></div>
+          <div id="fs-content"></div>
+        </div>
+        <div id="panel-coach" class="panel" hidden>
+          <div class="coach-provider">
+            <label for="provider-select">Engine</label>
+            <select id="provider-select" title="Which agent/model generates problems"></select>
+            <span id="provider-note" class="coach-note"></span>
+          </div>
+
+          <div class="coach-gen">
+            <div class="coach-gen-title">Generate a problem</div>
+            <input id="gen-topic" class="coach-input" placeholder="topic — e.g. sliding-window rate limiter, LRU cache, interval merge" />
+            <div class="coach-gen-row">
+              <select id="gen-level" title="Difficulty">
+                <option value="easy">easy · ~2 levels</option>
+                <option value="medium" selected>medium · ~3 levels</option>
+                <option value="hard">hard · ~4 levels</option>
+              </select>
+              <button class="btn primary" id="btn-generate">Generate</button>
+            </div>
+          </div>
+
+          <div class="coach-ask">
+            <div class="coach-gen-title">Ask the coach</div>
+            <div class="coach-quick">
+              <button class="chip-btn" data-ask="explain-level">Explain this level</button>
+              <button class="chip-btn" data-ask="hint">Give me a hint</button>
+              <button class="chip-btn" data-ask="review">Why is my code failing?</button>
+            </div>
+            <textarea id="ask-text" class="coach-input" rows="2" placeholder="ask anything about the current problem…"></textarea>
+            <button class="btn ghost" id="btn-ask">Ask</button>
+          </div>
+
+          <div id="coach-log" class="coach-log"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Reference modal -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>Reference solution</h3>
+        <div class="modal-actions">
+          <button class="btn ghost" id="btn-copy-ref">Copy</button>
+          <button class="btn ghost" id="btn-close-ref">Close</button>
+        </div>
+      </div>
+      <div class="modal-warn">
+        Attempt all four levels <em>cold</em> first — then diff against this to find
+        exactly where you'd have had to rewrite.
+      </div>
+      <div class="modal-code" id="ref-code"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

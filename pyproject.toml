@@ -1,0 +1,14 @@
+[project]
+name = "reps"
+version = "0.2"
+description = "Interview-practice harness — progressive coding drills, a real editor, and an agent coach that generates & explains problems from the web UI"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "markdown>=3.5",
+    "pyflakes>=3.2",
+]
+
+[tool.uvicorn]
+# convenience only; run.sh is the entrypoint

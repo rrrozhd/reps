@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ica-trainer",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--python", "3.12",
+        "--with", "fastapi",
+        "--with", "uvicorn[standard]",
+        "--with", "markdown",
+        "--with", "pyflakes",
+        "uvicorn", "app:app",
+        "--app-dir", "backend",
+        "--host", "127.0.0.1",
+        "--port", "8777"
+      ],
+      "port": 8777
+    }
+  ]
+}
