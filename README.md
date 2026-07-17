@@ -1,6 +1,11 @@
 <p align="center">
-  <img src="assets/reps-dark.svg" alt="reps" width="300" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/reps-mark-dark.svg">
+    <img src="assets/reps-mark.svg" alt="reps" width="170">
+  </picture>
 </p>
+
+<h1 align="center">reps</h1>
 
 <p align="center">
   <strong>Coding-interview practice with a real editor, a verifying runner, and an

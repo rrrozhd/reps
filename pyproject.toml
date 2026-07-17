@@ -1,6 +1,6 @@
 [project]
 name = "reps"
-version = "0.3.1"
+version = "0.3.1.1"
 description = "Interview-practice harness — progressive coding drills, a real editor, and an agent coach that generates & explains problems from the web UI"
 requires-python = ">=3.10"
 license = { text = "MIT" }
