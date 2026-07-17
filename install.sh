@@ -21,15 +21,27 @@ else
 fi
 chmod +x "$REPS_HOME/reps" "$REPS_HOME/run.sh" "$REPS_HOME/backend/reps_cli.py" 2>/dev/null || true
 
-# 2. link `reps` onto a PATH bin dir (prefer one already on PATH)
-BIN=""
-for d in "$HOME/.local/bin" "/usr/local/bin"; do
-  case ":$PATH:" in *":$d:"*) BIN="$d"; break ;; esac
-done
-[ -z "$BIN" ] && BIN="$HOME/.local/bin"
-mkdir -p "$BIN"
-ln -sf "$REPS_HOME/reps" "$BIN/reps"
-say "Linked 'reps' → $BIN/reps"
+# 2. link `reps` onto a bin dir that is BOTH on PATH and writable.
+#    (/usr/local/bin is often on PATH but needs sudo — don't die on it.)
+pick_bin() {
+  local d
+  for d in "$HOME/.local/bin" "/usr/local/bin" "$HOME/bin"; do
+    case ":$PATH:" in *":$d:"*) ;; *) continue ;; esac   # must be on PATH
+    if [ -d "$d" ] && [ -w "$d" ]; then printf '%s' "$d"; return; fi
+    if [ ! -e "$d" ] && mkdir -p "$d" 2>/dev/null; then printf '%s' "$d"; return; fi
+  done
+  printf '%s' "$HOME/.local/bin"    # nothing usable on PATH — we'll tell them to add this
+}
+BIN="$(pick_bin)"
+mkdir -p "$BIN" 2>/dev/null || true
+if ln -sf "$REPS_HOME/reps" "$BIN/reps" 2>/dev/null; then
+  say "Linked 'reps' → $BIN/reps"
+else
+  say "Couldn't write to $BIN. Either run:"
+  echo "    sudo ln -sf \"$REPS_HOME/reps\" /usr/local/bin/reps"
+  echo "  or just use it directly:  $REPS_HOME/reps"
+  exit 1
+fi
 
 # 3. helpful nudges
 command -v uv >/dev/null 2>&1 || \
