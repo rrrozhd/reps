@@ -8,8 +8,15 @@ A real terminal has a TTY, so this is the reliable place to sign a CLI agent in
 
 import json
 import os
+import select
 import subprocess
 import sys
+
+try:
+    import termios
+    import tty
+except ImportError:  # non-POSIX (e.g. Windows) → fall back to the numbered prompt
+    termios = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -31,7 +38,9 @@ def ask(prompt, default=""):
     return s or default
 
 
-def choose(title, options):
+def _choose_numbered(title, options):
+    """Type-a-number prompt. Used when stdin/stdout isn't a real TTY (pipes,
+    redirected input) or termios is unavailable — so `setup` stays scriptable."""
     print(f"\n{Y}{title}{R}")
     for i, (label, _v) in enumerate(options, 1):
         print(f"  {i}) {label}")
@@ -40,6 +49,73 @@ def choose(title, options):
         if c.isdigit() and 1 <= int(c) <= len(options):
             return options[int(c) - 1][1]
         print("  pick a number")
+
+
+def _read_key(fd):
+    """One keypress from a raw-mode fd, decoding arrow escape sequences.
+    `select` disambiguates a bare Esc from the start of an arrow sequence."""
+    ch = os.read(fd, 1).decode(errors="ignore")
+    if ch == "\x1b" and select.select([fd], [], [], 0.03)[0]:
+        ch += os.read(fd, 2).decode(errors="ignore")
+    return ch
+
+
+def _choose_interactive(title, options):
+    """Arrow-key menu: ↑/↓ (or j/k) to move, Enter to pick, a digit to jump,
+    q/Esc/Ctrl-C to cancel. The selected row is drawn in green with a ❯ pointer
+    and redrawn in place on each keypress."""
+    n = len(options)
+    idx = 0
+    fd = sys.stdin.fileno()
+    print(f"\n{Y}{title}{R}")
+    print(f"{DIM}  ↑/↓ move · enter select · q cancel{R}")
+
+    def draw(first):
+        if not first:
+            sys.stdout.write(f"\033[{n}A")  # cursor back up to the first row
+        for i, (label, _v) in enumerate(options):
+            # \r + clear-line guards against raw mode not returning to column 0.
+            if i == idx:
+                sys.stdout.write(f"\r\033[K{G}❯ {label}{R}\n")
+            else:
+                sys.stdout.write(f"\r\033[K  {label}\n")
+        sys.stdout.flush()
+
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        sys.stdout.write("\033[?25l")  # hide cursor while navigating
+        sys.stdout.flush()
+        draw(True)
+        while True:
+            key = _read_key(fd)
+            if key in ("\x1b[A", "k"):
+                idx = (idx - 1) % n
+                draw(False)
+            elif key in ("\x1b[B", "j"):
+                idx = (idx + 1) % n
+                draw(False)
+            elif key in ("\r", "\n"):
+                return options[idx][1]
+            elif key.isdigit() and 1 <= int(key) <= n:
+                return options[int(key) - 1][1]
+            elif key in ("q", "\x1b", "\x03"):  # q / Esc / Ctrl-C
+                raise KeyboardInterrupt
+    finally:
+        sys.stdout.write("\033[?25h")  # restore cursor
+        sys.stdout.flush()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def choose(title, options):
+    if termios is None or not sys.stdin.isatty() or not sys.stdout.isatty():
+        return _choose_numbered(title, options)
+    try:
+        return _choose_interactive(title, options)
+    except KeyboardInterrupt:
+        raise  # let setup()'s handler print "cancelled."
+    except Exception:  # noqa: BLE001 — any terminal weirdness shouldn't break setup
+        return _choose_numbered(title, options)
 
 
 def setup():
