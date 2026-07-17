@@ -4,7 +4,7 @@ from harness import ANY, Pred  # noqa: F401  (available to test authors)
 
 SLUG = "job-scheduler"
 TITLE = "Lazy Job Scheduler"
-DIFFICULTY = "Ramp ICA archetype · 4 levels"
+DIFFICULTY = "CodeSignal-style ICA archetype · 4 levels"
 ENTRYPOINT = "Scheduler"
 
 MARKDOWN = r"""

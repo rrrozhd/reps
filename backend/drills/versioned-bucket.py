@@ -4,7 +4,7 @@ from harness import ANY, Pred  # noqa: F401  (available to test authors)
 
 SLUG = "versioned-bucket"
 TITLE = "Versioned Object Store"
-DIFFICULTY = "Ramp ICA archetype · 4 levels"
+DIFFICULTY = "CodeSignal-style ICA archetype · 4 levels"
 ENTRYPOINT = "Bucket"
 
 MARKDOWN = r"""

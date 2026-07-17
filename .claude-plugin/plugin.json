@@ -1,11 +1,20 @@
 {
   "name": "reps",
-  "displayName": "reps — interview practice",
-  "version": "0.2.0",
+  "displayName": "reps \u2014 interview practice",
+  "version": "0.3.0",
   "description": "Progressive coding-interview drills with a real editor, a verifying runner, and an agent coach that generates and explains problems from the web UI.",
-  "author": { "name": "rrrozhd" },
+  "author": {
+    "name": "rrrozhd"
+  },
   "homepage": "https://github.com/rrrozhd/reps",
   "repository": "https://github.com/rrrozhd/reps",
   "license": "MIT",
-  "keywords": ["interview", "coding", "practice", "codesignal", "ica", "drills"]
+  "keywords": [
+    "interview",
+    "coding",
+    "practice",
+    "codesignal",
+    "ica",
+    "drills"
+  ]
 }

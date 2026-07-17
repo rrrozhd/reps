@@ -5,7 +5,7 @@ coach that generates and explains problems — all from the browser.**
 
 reps is a local, CodeSignal-style harness for **progressive** coding problems
 (one problem, several levels, each bolting a new requirement onto the same
-growing system — the format Ramp / CodeSignal ICAs use). You solve in a real
+growing system — the format CodeSignal ICAs use). You solve in a real
 Monaco editor; a sandboxed runner tests each level. When you want a new problem,
 you ask the built-in **Coach**, which drives *your* coding agent (or an API
 model) to write a fresh drill — spec, starter, reference, and tests — and only
@@ -16,7 +16,7 @@ ships it once it passes its own verification.
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rrrozhd/reps/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/rrrozhd/reps/main/install.sh | bash
 reps
 ```
 
@@ -96,13 +96,33 @@ correctness never depends on the model, only on passing the tests.
 > detected and active. If a local CLI errors on auth, run it once in a terminal
 > to log in.
 
-## The built-in drills
+## The problem library
 
-| Drill | Skin | The twist that forces good state design |
-|-------|------|------------------------------------------|
-| **Banking System** | accounts, transfers, cashback | historical `get_balance` + `merge` → balance is a checkpoint log |
-| **In-Memory File System** | dirs, files, copy/move | `get_file_size(path, at_version)` → per-file write log |
-| **Key-Value Store w/ TTL** | set/get, prefix scan, expiry | `get(key, at_ts)` + lazy expiry → per-key record log |
+**17 problems ship with it**, all verified (`verify_drill.py` runs each reference
+against its own tests).
+
+**9 progressive drills** — one growing system, 4 levels, the last level punishes a
+naive data model:
+
+| Drill | The twist that forces good state design |
+|-------|-----------------------------------------|
+| **Banking System** | historical `get_balance` + `merge` → balance is a checkpoint log |
+| **In-Memory File System** | `get_file_size(path, at_version)` → per-file write log |
+| **Key-Value Store w/ TTL** | `get(key, at_ts)` + lazy expiry → per-key record log |
+| **LRU Cache with TTL** | eviction + TTL + an as-of read |
+| **Sliding-Window Rate Limiter** | timestamp log + bisect, not a deque you pop |
+| **In-Memory DB with Transactions** | nested `begin` / `commit` / `rollback` |
+| **Lazy Job Scheduler** | jobs fire lazily on the next op, not on a timer |
+| **Versioned Object Store** | versions + `restore` + as-of read |
+| **Inventory w/ Expiring Reservations** | holds expire lazily; historical availability |
+
+**8 algorithms** — single function, tested in example / edge / scale groups:
+`two-sum` (hashmap, easy) · `valid-parentheses` (stack, easy) · `merge-intervals`
+(medium) · `search-rotated` (binary search, medium) · `longest-substring`
+(sliding window, medium) · `num-islands` (graphs, medium) · `coin-change` (DP,
+medium) · `trapping-rain-water` (two-pointers, hard).
+
+Ask the Coach for more, on any topic or difficulty.
 
 ## Use it as a Claude Code plugin
 

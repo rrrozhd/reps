@@ -1,10 +1,10 @@
-"""Drill 1 — Banking System (the canonical Ramp ICA archetype)."""
+"""Drill 1 — Banking System (the canonical CodeSignal-style ICA archetype)."""
 
 from harness import ANY, Pred  # noqa: F401  (available to test authors)
 
 SLUG = "banking"
 TITLE = "Banking System"
-DIFFICULTY = "Ramp ICA archetype · 4 levels"
+DIFFICULTY = "CodeSignal-style ICA archetype · 4 levels"
 ENTRYPOINT = "Bank"
 
 MARKDOWN = r"""

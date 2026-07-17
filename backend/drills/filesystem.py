@@ -4,7 +4,7 @@ from harness import ANY, Pred  # noqa: F401
 
 SLUG = "filesystem"
 TITLE = "In-Memory File System"
-DIFFICULTY = "Ramp ICA archetype · 4 levels"
+DIFFICULTY = "CodeSignal-style ICA archetype · 4 levels"
 ENTRYPOINT = "FileSystem"
 
 MARKDOWN = r"""
@@ -404,14 +404,14 @@ LEVELS = [
 # ---------- filesystem visualiser (runs a fixed demo on the user's class) ----
 DEMO_SCRIPT = [
     ("mkdir", "/projects"),
-    ("mkdir", "/projects/ramp"),
-    ("add_file", "/projects/ramp/main.py", 1200),
-    ("add_file", "/projects/ramp/README.md", 340),
-    ("mkdir", "/projects/ramp/tests"),
-    ("add_file", "/projects/ramp/tests/test_bank.py", 800),
-    ("copy", "/projects/ramp", "/backup"),
+    ("mkdir", "/projects/demo"),
+    ("add_file", "/projects/demo/main.py", 1200),
+    ("add_file", "/projects/demo/README.md", 340),
+    ("mkdir", "/projects/demo/tests"),
+    ("add_file", "/projects/demo/tests/test_app.py", 800),
+    ("copy", "/projects/demo", "/backup"),
     ("add_file", "/projects/notes.txt", 50),
-    ("move", "/projects/notes.txt", "/projects/ramp/notes.txt"),
+    ("move", "/projects/notes.txt", "/projects/demo/notes.txt"),
 ]
 
 

@@ -1,4 +1,4 @@
-"""Drill — Inventory with expiring reservations (Ramp ICA archetype)."""
+"""Drill — Inventory with expiring reservations (CodeSignal-style ICA archetype)."""
 
 from harness import ANY, Pred  # noqa: F401  (available to test authors)
 

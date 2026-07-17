@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # reps installer — makes `reps` a global command.
-#   curl -fsSL https://raw.githubusercontent.com/rrrozhd/reps/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/rrrozhd/reps/main/install.sh | bash
 #
 # Installs the app into ~/.reps and links a `reps` command onto your PATH.
 set -euo pipefail

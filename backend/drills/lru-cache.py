@@ -4,7 +4,7 @@ from harness import ANY, Pred  # noqa: F401
 
 SLUG = "lru-cache"
 TITLE = "LRU Cache with TTL"
-DIFFICULTY = "Ramp ICA archetype · 4 levels"
+DIFFICULTY = "CodeSignal-style ICA archetype · 4 levels"
 ENTRYPOINT = "LRUCache"
 
 MARKDOWN = r"""

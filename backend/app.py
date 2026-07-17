@@ -1,4 +1,4 @@
-"""FastAPI backend for the Ramp ICA practice harness.
+"""FastAPI backend for the reps interview-practice harness.
 
 Endpoints:
     GET  /api/drills            list drills

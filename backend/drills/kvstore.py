@@ -4,7 +4,7 @@ from harness import ANY, Pred  # noqa: F401
 
 SLUG = "kvstore"
 TITLE = "Key-Value Store with TTL"
-DIFFICULTY = "Ramp ICA archetype · 4 levels"
+DIFFICULTY = "CodeSignal-style ICA archetype · 4 levels"
 ENTRYPOINT = "KVStore"
 
 MARKDOWN = r"""
