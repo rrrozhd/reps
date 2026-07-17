@@ -82,6 +82,43 @@ This executes your REFERENCE against your own LEVELS. It must print
 in your reference OR your test's expected value — fix and re-run until green. A
 drill that doesn't verify is not done. Never hand back an unverified drill.
 
+## Algorithmic problems (`KIND = "algo"`)
+
+A second problem type: a **single function** (LeetCode-style), tagged by topic and
+difficulty, tested by groups of cases. Same module file, a few different fields:
+
+```python
+KIND = "algo"
+TOPIC = "graphs"                 # arrays, strings, hashmap, two-pointers, sliding-window,
+                                 # binary-search, stack, intervals, trees, graphs, dp, heap
+DIFFICULTY = "medium"            # easy | medium | hard  (shown as a badge)
+ENTRYPOINT = "num_islands"       # a FUNCTION name (not a class)
+MARKDOWN = "..."                 # problem statement + a couple of worked examples + constraints
+STARTER = "def num_islands(grid):\n    pass\n"
+REFERENCE = "def num_islands(grid):\n    ..."   # correct, stdlib only
+LEVELS = [                       # here "levels" are test GROUPS, not difficulty tiers
+    {"name": "Examples",   "tests": [ex]},
+    {"name": "Edge cases", "tests": [edges]},
+    {"name": "Scale",      "tests": [big]},     # optional: a larger input
+]
+```
+
+Test functions receive the **function** and call it:
+
+```python
+def ex(F):
+    return [
+        ("[[1,1,0],[0,1,0]] -> 1", 1, F([[1,1,0],[0,1,0]])),
+        ("all water -> 0", 0, F([[0,0],[0,0]])),
+    ]
+```
+
+Guidance: MARKDOWN states the signature, 1–2 worked examples, and constraints.
+Cover the classic edge cases (empty input, single element, all-same, duplicates,
+negatives, already-sorted/reversed). Add one "Scale" case big enough that an
+obviously-quadratic solution would look slow (correctness only — no hard timeout).
+Verify exactly the same way: `python3 backend/verify_drill.py <slug>` must be green.
+
 ## Good topics & the trap each teaches
 
 - **state machine / simulation** (banking, inventory) → checkpoint log for history

@@ -9,13 +9,8 @@ venv/
 # reps: durable per-drill solutions are local, not shared
 .solutions/
 
-# agent-generated drills are personal by default; keep the three built-ins.
-# (delete these lines if you want to commit generated drills)
-backend/drills/*.py
-!backend/drills/__init__.py
-!backend/drills/banking.py
-!backend/drills/filesystem.py
-!backend/drills/kvstore.py
+# reps: local coach/engine config (may hold an API key)
+.reps-config.json
 
 # server logs
 *.log

@@ -67,14 +67,16 @@ def build_result(payload):
         return {"loadError": f"{type(exc).__name__}: {exc}",
                 "traceback": traceback.format_exc()}
 
-    cls = namespace.get(drill.ENTRYPOINT)
-    if not isinstance(cls, type):
-        return {"loadError": f"Your code must define a class named `{drill.ENTRYPOINT}`."}
+    # Entry point is a class (progressive drills) or a function (algorithms).
+    entry = namespace.get(drill.ENTRYPOINT)
+    if not callable(entry):
+        return {"loadError": f"Your code must define `{drill.ENTRYPOINT}` "
+                             f"(a {'function' if getattr(drill, 'KIND', 'drill') == 'algo' else 'class'})."}
 
     levels = []
     try:
         for level in drill.LEVELS:
-            tests = [run_test(tf, cls) for tf in level["tests"]]
+            tests = [run_test(tf, entry) for tf in level["tests"]]
             levels.append({
                 "name": level["name"],
                 "ok": all(t["ok"] for t in tests),
@@ -88,7 +90,7 @@ def build_result(payload):
     result = {"levels": levels}
     if hasattr(drill, "render_state"):
         try:
-            result["state"] = drill.render_state(cls)
+            result["state"] = drill.render_state(entry)
         except Exception as exc:  # noqa: BLE001
             result["state"] = {"error": str(exc)}
     return result
