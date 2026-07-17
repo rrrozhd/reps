@@ -21,7 +21,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-FRONTEND = os.path.normpath(os.path.join(HERE, "..", "frontend"))
+# The React app is built by Vite; dist/ is committed so `curl | bash` needs no node.
+FRONTEND = os.path.normpath(os.path.join(HERE, "..", "frontend", "dist"))
 ASSETS = os.path.normpath(os.path.join(HERE, "..", "assets"))
 WORKER = os.path.join(HERE, "worker.py")
 SOLUTIONS_DIR = os.path.normpath(os.path.join(HERE, "..", ".solutions"))

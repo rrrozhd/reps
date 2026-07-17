@@ -171,10 +171,29 @@ Drills are discovered from the directory — no registration needed.
 
 ```
 backend/     app.py (API) · agent.py (engine bridge) · worker.py (sandboxed runner)
-             verify_drill.py · drills/*.py
-frontend/    index.html · app.js · styles.css   (Monaco UI)
+             verify_drill.py · reps_cli.py (setup wizard) · drills/*.py
+frontend/    React + Vite UI — src/*.jsx, styles.css
+             dist/  ← the built bundle, committed on purpose (see below)
+assets/      brand logo set, served at /assets
 .claude/     skills/authoring-drills/SKILL.md    (the drill contract)
 ```
+
+## Working on the UI
+
+The web UI is React + Vite. **`frontend/dist/` is committed deliberately** — that's
+what keeps `curl | bash` working with zero node toolchain: running reps needs only
+Python. Node is a *contributor* dependency, never a user one.
+
+```bash
+cd frontend
+npm install
+npm run dev      # hot reload on :5173, proxies /api + /assets to the backend on :8777
+npm run build    # rebuild dist/ — commit it with your change
+```
+
+If you change anything under `frontend/src/`, **rebuild and commit `dist/`**, or the
+running app won't reflect it. (Monaco loads from a CDN rather than being bundled —
+it would add ~5MB to every committed rebuild.)
 
 ## Shortcuts
 

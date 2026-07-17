@@ -6,6 +6,13 @@ venv/
 *.egg-info/
 .pytest_cache/
 
+# Node / Vite (the web UI toolchain)
+node_modules/
+.vite/
+# NOTE: frontend/dist/ is deliberately COMMITTED — it's the built React bundle,
+# so `curl | bash` installs need no node toolchain. Rebuild with:
+#   cd frontend && npm install && npm run build
+
 # reps: durable per-drill solutions are local, not shared
 .solutions/
 

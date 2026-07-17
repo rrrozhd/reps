@@ -1,0 +1,21 @@
+{
+  "name": "reps-web",
+  "private": true,
+  "version": "0.4.0",
+  "type": "module",
+  "description": "reps web UI (React + Vite). Built output in dist/ is committed so `curl | bash` needs no node.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
+  }
+}
