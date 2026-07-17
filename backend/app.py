@@ -43,6 +43,28 @@ def _render_md(text: str) -> str:
     return md.markdown(text, extensions=["fenced_code", "tables", "sane_lists"])
 
 
+def _blurb(d):
+    """A short one-paragraph description for the menu: an explicit BLURB if the
+    drill defines one, else the first real paragraph of its MARKDOWN."""
+    b = getattr(d, "BLURB", None)
+    if b:
+        return b.strip()
+    para = []
+    for line in d.MARKDOWN.strip().splitlines():
+        s = line.strip()
+        if s.startswith("#") or s.startswith("---") or s.startswith(">"):
+            if para:
+                break
+            continue
+        if not s:
+            if para:
+                break
+            continue
+        para.append(s)
+    text = " ".join(para).replace("**", "").replace("`", "")
+    return (text[:200] + "…") if len(text) > 200 else text
+
+
 @app.get("/api/drills")
 def list_drills():
     out = []
@@ -51,7 +73,10 @@ def list_drills():
         out.append({
             "slug": d.SLUG,
             "title": d.TITLE,
+            "kind": getattr(d, "KIND", "drill"),
+            "topic": getattr(d, "TOPIC", ""),
             "difficulty": getattr(d, "DIFFICULTY", ""),
+            "blurb": _blurb(d),
             "levels": [lv["name"] for lv in d.LEVELS],
         })
     return out
@@ -225,6 +250,89 @@ def agent_explain(body: ExplainBody):
     if not body.question.strip():
         return JSONResponse({"error": "question is required"}, status_code=400)
     return agent.explain(body.question.strip(), body.context, body.provider.strip() or None)
+
+
+class TestBody(BaseModel):
+    provider: str = ""
+
+
+@app.post("/api/agent/test")
+def agent_test(body: TestBody):
+    return agent.test_provider(body.provider.strip() or None)
+
+
+class LoginBody(BaseModel):
+    provider: str = "claude"
+    code: str = ""
+
+
+@app.get("/api/agent/login/status")
+def login_status(provider: str = "claude"):
+    return agent.cli_login_status(provider)
+
+
+@app.post("/api/agent/login/start")
+def login_start(body: LoginBody):
+    return agent.cli_login_start(body.provider or "claude")
+
+
+@app.get("/api/agent/login/poll")
+def login_poll(provider: str = "claude"):
+    return agent.cli_login_poll(provider)
+
+
+@app.post("/api/agent/login/code")
+def login_code(body: LoginBody):
+    return agent.cli_login_code(body.provider or "claude", body.code)
+
+
+@app.post("/api/agent/login/logout")
+def login_logout(body: LoginBody):
+    return agent.cli_logout(body.provider or "claude")
+
+
+@app.get("/api/config")
+def get_config():
+    cfg = agent.load_config()
+    ep = cfg.get("endpoint") or {}
+    # never echo the stored key back to the browser
+    return {
+        "provider": cfg.get("provider", ""),
+        "endpoint": {
+            "base_url": ep.get("base_url", ""),
+            "model": ep.get("model", ""),
+            "name": ep.get("name", ""),
+            "has_key": bool(ep.get("api_key")),
+        },
+    }
+
+
+class ConfigBody(BaseModel):
+    provider: str | None = None
+    base_url: str | None = None
+    model: str | None = None
+    name: str | None = None
+    api_key: str | None = None
+
+
+@app.put("/api/config")
+def put_config(body: ConfigBody):
+    cfg = agent.load_config()
+    if body.provider is not None:
+        cfg["provider"] = body.provider
+    if any(v is not None for v in (body.base_url, body.model, body.name, body.api_key)):
+        ep = cfg.get("endpoint") or {}
+        if body.base_url is not None:
+            ep["base_url"] = body.base_url.strip()
+        if body.model is not None:
+            ep["model"] = body.model.strip()
+        if body.name is not None:
+            ep["name"] = body.name.strip()
+        if body.api_key:  # only overwrite when a non-empty key is provided
+            ep["api_key"] = body.api_key
+        cfg["endpoint"] = ep
+    agent.save_config(cfg)
+    return {"ok": True}
 
 
 # Static frontend last, so /api/* wins.

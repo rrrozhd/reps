@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# reps — set up and run the trainer from anywhere.
+#   reps          first run walks you through setup, then starts the app
+#   reps setup    reconfigure the coach engine (pick provider, sign in)
+#   reps status   show the detected/active engine
+#   reps start    just start the app
+set -euo pipefail
+
+# Resolve our real location even when invoked via a symlink on PATH.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+cd "$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
+
+case "${1:-start}" in
+  setup)  exec python3 backend/reps_cli.py setup ;;
+  status) exec python3 backend/reps_cli.py status ;;
+  start|"")
+    if [ ! -f .reps-config.json ]; then
+      echo "First run — let's set up your coach engine."
+      python3 backend/reps_cli.py setup || true
+      echo
+    fi
+    exec ./run.sh ;;
+  *) echo "usage: reps [setup|status|start]"; exit 1 ;;
+esac

@@ -9,34 +9,104 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
+    <div class="brand" id="brand" title="Back to problems">
       <span class="logo">◧</span>
       <span class="brand-name">reps</span>
       <span class="brand-sub">interview practice</span>
     </div>
 
-    <div class="drill-picker">
-      <label class="sr-only" for="drill-select">Drill</label>
-      <select id="drill-select" title="Choose a drill"></select>
-      <span id="drill-diff" class="pill muted"></span>
-    </div>
+    <button class="btn ghost" id="btn-home" title="Back to all problems" hidden>← Problems</button>
+    <span id="current-title" class="current-title" hidden></span>
+    <span id="drill-diff" class="pill muted" hidden></span>
 
-    <div class="topbar-right">
-      <div class="timer" id="timer" title="90-minute ICA clock">
-        <span class="timer-face" id="timer-face">90:00</span>
-        <button class="tbtn" id="timer-toggle" title="Start / pause">▶</button>
-        <button class="tbtn" id="timer-reset" title="Reset to 90:00">↺</button>
+    <div class="topbar-right" id="topbar-right">
+      <div class="wb-controls" id="wb-controls" hidden>
+        <div class="timer" id="timer" title="90-minute ICA clock">
+          <span class="timer-face" id="timer-face">90:00</span>
+          <button class="tbtn" id="timer-toggle" title="Start / pause">▶</button>
+          <button class="tbtn" id="timer-reset" title="Reset to 90:00">↺</button>
+        </div>
+        <button class="btn ghost" id="btn-coach" title="Ask the agent for problems or explanations">✦ Coach</button>
+        <button class="btn ghost" id="btn-reset" title="Restore starter code">Reset code</button>
+        <button class="btn ghost" id="btn-ref" title="Peek at a reference solution">Reference</button>
+        <button class="btn primary" id="btn-run" title="Run tests (⌘/Ctrl + Enter)">
+          <span class="run-label">Run</span> <kbd>⌘↵</kbd>
+        </button>
       </div>
-      <button class="btn ghost" id="btn-coach" title="Ask the agent for problems or explanations">✦ Coach</button>
-      <button class="btn ghost" id="btn-reset" title="Restore starter code">Reset code</button>
-      <button class="btn ghost" id="btn-ref" title="Peek at a reference solution">Reference</button>
-      <button class="btn primary" id="btn-run" title="Run tests (⌘/Ctrl + Enter)">
-        <span class="run-label">Run</span> <kbd>⌘↵</kbd>
-      </button>
+      <button class="btn ghost" id="btn-settings" title="Coach & engine settings">⚙ Settings</button>
     </div>
   </header>
 
-  <main class="workbench" id="workbench">
+  <section class="settings" id="settings" hidden>
+    <div class="settings-inner">
+      <button class="btn ghost" id="btn-settings-back">← Back</button>
+      <h1>Coach settings</h1>
+      <p class="settings-lead">Pick the engine that generates and explains problems. Local CLI
+        agents use your existing login; the local-model / API option uses an endpoint you point at.</p>
+
+      <div class="set-block">
+        <h2>Engine</h2>
+        <div id="engine-list" class="engine-list"></div>
+      </div>
+
+      <div class="set-block" id="account-block">
+        <h2>Claude Code account</h2>
+        <div id="account-status" class="account-status">checking…</div>
+        <div class="account-actions">
+          <button class="btn primary" id="btn-login">Log in</button>
+          <button class="btn ghost" id="btn-logout">Log out</button>
+          <button class="btn ghost" id="btn-recheck">Recheck</button>
+        </div>
+        <div id="login-flow" class="login-flow" hidden>
+          <p class="set-hint">A browser sign-in started. Open the link below, authorize, then
+            come back — this page auto-detects when you're in.</p>
+          <a id="login-url" class="login-url" target="_blank" rel="noopener">Open sign-in page ↗</a>
+          <div id="login-code-row" class="login-code-row" hidden>
+            <input id="login-code" placeholder="paste the code from that page (only if it asks)" autocomplete="off" />
+            <button class="btn" id="btn-login-code">Submit</button>
+          </div>
+          <pre id="login-output" class="login-output"></pre>
+        </div>
+      </div>
+
+      <div class="set-block">
+        <h2>Local model · vLLM / OpenAI-compatible</h2>
+        <p class="set-hint">Point at any OpenAI-compatible server — vLLM, Ollama, LM Studio,
+          OpenRouter, or a hosted API. Then choose <em>“Local model”</em> above.</p>
+        <label class="set-field">Base URL
+          <input id="cfg-base" placeholder="http://localhost:8000/v1" autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="set-field">Model
+          <input id="cfg-model" placeholder="e.g. meta-llama/Llama-3.1-8B-Instruct" autocomplete="off" spellcheck="false" />
+        </label>
+        <label class="set-field">API key <span class="set-opt">optional — leave blank for vLLM/Ollama</span>
+          <input id="cfg-key" type="password" placeholder="stored locally in .reps-config.json" autocomplete="off" />
+        </label>
+        <button class="btn" id="cfg-save">Save endpoint</button>
+      </div>
+
+      <div class="set-block">
+        <button class="btn primary" id="btn-test">Test connection</button>
+        <div id="test-result" class="test-result"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="menu" id="menu" hidden>
+    <div class="menu-head">
+      <h1>Choose a problem</h1>
+      <p class="menu-sub">Progressive coding drills. Read every level first, design your state object, then green each level in order.</p>
+      <button class="btn primary" id="btn-menu-coach" title="Generate a new problem with the agent">✦ Generate a new problem</button>
+      <div class="menu-filters" id="menu-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="drill">Progressive drills</button>
+        <button class="filter-btn" data-filter="algo">Algorithms</button>
+      </div>
+    </div>
+    <div class="menu-grid" id="menu-grid"></div>
+  </section>
+
+  <main class="workbench" id="workbench" hidden>
     <!-- Task -->
     <section class="pane pane-task" id="pane-task">
       <div class="pane-head">

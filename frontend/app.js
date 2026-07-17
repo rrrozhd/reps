@@ -11,6 +11,9 @@
   var running = false;
   var lastRun = null;          // last /api/run result (for coach context)
   var activeProvider = null;   // agent engine id
+  var allProblems = [];        // menu cache
+  var menuFilter = "all";      // all | drill | algo
+  var loginPollTimer = null;   // CLI-login poll
 
   // ---- Monaco worker proxy (keeps the console clean; Python needs no LSP) ----
   window.MonacoEnvironment = {
@@ -56,7 +59,7 @@
     defineTheme();
     createEditor();
     wireChrome();
-    loadDrillList();
+    showMenu();
   });
 
   function defineTheme() {
@@ -164,27 +167,101 @@
   }
 
   // ------------------------------------------------------------ drills
-  // Repopulate the drill dropdown. If openSlug is given (and exists) switch to
-  // it; otherwise keep the current selection, or on first load pick last/first.
-  function loadDrillList(openSlug) {
+  // ---- views: menu (browse) · workbench (solve) · settings ----
+  function showMenu() {
+    clearTimeout(loginPollTimer);
+    $("menu").hidden = false;
+    $("workbench").hidden = true;
+    $("settings").hidden = true;
+    $("btn-home").hidden = true;
+    $("current-title").hidden = true;
+    $("drill-diff").hidden = true;
+    $("wb-controls").hidden = true;
+    loadMenu();                      // refresh so newly generated problems appear
+  }
+
+  function showWorkbench() {
+    clearTimeout(loginPollTimer);
+    $("menu").hidden = true;
+    $("workbench").hidden = false;
+    $("settings").hidden = true;
+    $("btn-home").hidden = false;
+    $("current-title").hidden = false;
+    $("drill-diff").hidden = false;
+    $("wb-controls").hidden = false;
+    if (editor) setTimeout(function () { editor.layout(); }, 0);  // Monaco was hidden
+  }
+
+  function showSettings() {
+    $("menu").hidden = true;
+    $("workbench").hidden = true;
+    $("settings").hidden = false;
+    $("btn-home").hidden = true;
+    $("current-title").hidden = true;
+    $("drill-diff").hidden = true;
+    $("wb-controls").hidden = true;
+    loadSettings();
+  }
+
+  function openProblem(slug) {
+    showWorkbench();
+    openDrill(slug);
+  }
+
+  function shortLevel(name) { return name.replace(/^Level\s*\d+\s*[—-]\s*/, ""); }
+
+  // Fetch problems, then render the menu (respecting the active filter).
+  function loadMenu() {
     return fetch("/api/drills").then(function (r) { return r.json(); }).then(function (list) {
-      var sel = $("drill-select");
-      var keep = sel.value;
-      sel.innerHTML = "";
-      list.forEach(function (d) {
-        var opt = document.createElement("option");
-        opt.value = d.slug;
-        opt.textContent = d.title;
-        sel.appendChild(opt);
-      });
-      sel.onchange = function () { openDrill(sel.value); };  // idempotent
-      var has = function (s) { return s && list.some(function (d) { return d.slug === s; }); };
-      if (has(openSlug)) { sel.value = openSlug; openDrill(openSlug); return; }
-      if (has(keep)) { sel.value = keep; return; }           // keep current, no reopen
+      allProblems = list;
+      renderCards();
+    });
+  }
+
+  function renderCards() {
+    var grid = $("menu-grid");
+    grid.innerHTML = "";
+    allProblems
+      .filter(function (d) { return menuFilter === "all" || (d.kind || "drill") === menuFilter; })
+      .forEach(function (d) { grid.appendChild(problemCard(d)); });
+  }
+
+  function problemCard(d) {
+    var kind = d.kind || "drill";
+    var levels = (d.levels || []).map(function (n) {
+      return '<span class="pc-lvl">' + esc(shortLevel(n)) + "</span>";
+    }).join("");
+    var n = (d.levels || []).length;
+    var badge, sub;
+    if (kind === "algo") {
+      var diff = (d.difficulty || "").toLowerCase();
+      badge = '<span class="pc-badge diff-' + esc(diff) + '">' + esc(d.difficulty || "") + "</span>";
+      sub = "Algorithm · " + esc(d.topic || "");
+    } else {
+      badge = '<span class="pc-diff">' + n + " level" + (n === 1 ? "" : "s") + "</span>";
+      sub = "Progressive drill";
+    }
+    var card = document.createElement("button");
+    card.className = "problem-card";
+    card.innerHTML =
+      '<div class="pc-top"><span class="pc-title">' + esc(d.title) + "</span>" + badge + "</div>" +
+      '<div class="pc-sub">' + sub + "</div>" +
+      '<p class="pc-blurb">' + esc(d.blurb || "") + "</p>" +
+      '<div class="pc-levels">' + levels + "</div>" +
+      '<span class="pc-cta">Start →</span>';
+    card.addEventListener("click", function () { openProblem(d.slug); });
+    return card;
+  }
+
+  function openCoachFromMenu() {
+    fetch("/api/drills").then(function (r) { return r.json(); }).then(function (list) {
       var last = null;
       try { last = localStorage.getItem("ica:last"); } catch (e) {}
-      var start = has(last) ? last : (list[0] && list[0].slug);
-      if (start) { sel.value = start; openDrill(start); }
+      var pick = (last && list.some(function (d) { return d.slug === last; })) ? last
+                 : (list[0] && list[0].slug);
+      if (!pick) return;
+      openProblem(pick);
+      setTimeout(function () { selectTab("coach"); $("gen-topic").focus(); }, 150);
     });
   }
 
@@ -199,6 +276,7 @@
       current = d;
       try { localStorage.setItem("ica:last", slug); } catch (e) {}
       $("task-title").textContent = d.title;
+      $("current-title").textContent = d.title;
       $("drill-diff").textContent = d.difficulty;
       $("task-body").innerHTML = d.markdown_html;
       colorizeTaskCode();
@@ -540,10 +618,10 @@
           '<div class="cm-open" data-open="' + esc(res.slug) + '">Open ' + esc(res.slug) + " →</div>" +
           (res.verify ? "<pre>" + esc(res.verify) + "</pre>" : ""));
         ok.querySelector(".cm-open").addEventListener("click", function () {
-          loadDrillList(res.slug);   // switch to the new drill
+          openProblem(res.slug);     // jump into the new drill
         });
         $("gen-topic").value = "";
-        loadDrillList();             // add it to the dropdown, keep current view
+        loadMenu();                  // refresh the problem menu with the new card
       } else {
         coachMsg("err", '<span class="cm-badge">✕ failed</span> ' + esc(res.provider_name || res.provider || ""),
           esc(res.error || "generation failed") +
@@ -583,6 +661,158 @@
     if (!kind) $("ask-text").value = "";
   }
 
+  // ------------------------------------------------------------ settings
+  function loadSettings() {
+    Promise.all([
+      fetch("/api/config").then(function (r) { return r.json(); }),
+      fetch("/api/agent/health").then(function (r) { return r.json(); })
+    ]).then(function (both) {
+      var cfg = both[0], h = both[1];
+      var ep = cfg.endpoint || {};
+      $("cfg-base").value = ep.base_url || "";
+      $("cfg-model").value = ep.model || "";
+      $("cfg-key").value = "";
+      $("cfg-key").placeholder = ep.has_key
+        ? "•••••• saved — leave blank to keep it"
+        : "stored locally in .reps-config.json";
+
+      var list = $("engine-list");
+      list.innerHTML = "";
+      (h.available || []).forEach(function (p) {
+        var opt = document.createElement("label");
+        opt.className = "engine-opt" + (p.id === h.active ? " sel" : "");
+        opt.innerHTML =
+          '<input type="radio" name="engine" value="' + esc(p.id) + '"' +
+          (p.id === h.active ? " checked" : "") + ">" +
+          "<span>" + esc(p.name) + "</span>" +
+          '<span class="eo-kind">' + esc(p.kind) + "</span>";
+        opt.querySelector("input").addEventListener("change", function () {
+          putConfig({ provider: p.id }).then(function () { loadSettings(); loadProviders(); });
+        });
+        list.appendChild(opt);
+      });
+      loadAccount();
+    });
+  }
+
+  // ---- in-app CLI login ----
+  function loadAccount() {
+    fetch("/api/agent/login/status?provider=claude")
+      .then(function (r) { return r.json(); }).then(renderAccount).catch(function () {});
+  }
+
+  function renderAccount(s) {
+    var el = $("account-status");
+    if (!s || s.supported === false) {
+      el.textContent = "Claude Code CLI not detected on this machine.";
+      $("btn-login").disabled = true;
+      return;
+    }
+    if (s.loggedIn) {
+      el.innerHTML = '<span class="acc-in">✓ Logged in</span>' +
+        (s.email ? " as " + esc(s.email) : "") +
+        (s.subscription ? " · " + esc(s.subscription) : "");
+    } else if (s.loggedIn === false) {
+      el.innerHTML = '<span class="acc-out">Not logged in</span> — click <strong>Log in</strong>.';
+    } else {
+      el.textContent = "Status unavailable" + (s.error ? " (" + s.error + ")" : "");
+    }
+  }
+
+  function applyLoginState(res) {
+    if (res.url) { var a = $("login-url"); a.href = res.url; a.style.display = "inline-block"; }
+    else { $("login-url").style.display = "none"; }
+    $("login-code-row").hidden = !/code|paste/i.test(res.output || "");
+    if (res.output) $("login-output").textContent = res.output;
+  }
+
+  function startLogin() {
+    $("login-flow").hidden = false;
+    $("login-url").style.display = "none";
+    $("login-output").textContent = "starting sign-in…";
+    fetch("/api/agent/login/start", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "claude" })
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.ok) { $("login-output").textContent = res.error || "could not start sign-in"; return; }
+      applyLoginState(res);
+      pollLogin();
+    });
+  }
+
+  function pollLogin() {
+    clearTimeout(loginPollTimer);
+    fetch("/api/agent/login/poll?provider=claude").then(function (r) { return r.json(); })
+      .then(function (p) {
+        applyLoginState(p);
+        if (p.status && p.status.loggedIn) {
+          $("login-flow").hidden = true;
+          renderAccount(p.status);
+          toast("Signed in");
+          loadProviders();
+          return;
+        }
+        loginPollTimer = setTimeout(pollLogin, 2000);
+      }).catch(function () { loginPollTimer = setTimeout(pollLogin, 3000); });
+  }
+
+  function submitLoginCode() {
+    var code = $("login-code").value.trim();
+    if (!code) return;
+    fetch("/api/agent/login/code", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "claude", code: code })
+    }).then(function () { $("login-code").value = ""; pollLogin(); });
+  }
+
+  function logout() {
+    fetch("/api/agent/login/logout", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "claude" })
+    }).then(function () { toast("Logged out"); loadAccount(); loadProviders(); });
+  }
+
+  function putConfig(body) {
+    return fetch("/api/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  }
+
+  function saveEndpoint() {
+    var body = {
+      base_url: $("cfg-base").value.trim(),
+      model: $("cfg-model").value.trim(),
+      name: "Local model"
+    };
+    var key = $("cfg-key").value;
+    if (key) body.api_key = key;
+    putConfig(body).then(function () {
+      toast("Endpoint saved");
+      loadSettings();
+      loadProviders();
+    });
+  }
+
+  function testConnection() {
+    var el = $("test-result");
+    el.className = "test-result";
+    el.innerHTML = '<span class="spin"></span> testing the active engine…';
+    fetch("/api/agent/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})   // empty -> tests whatever engine is active/saved
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      el.className = "test-result " + (res.ok ? "ok" : "err");
+      el.innerHTML = (res.ok ? "✓ connected — " : "✕ failed — ") +
+        esc(res.name || res.provider || "") + "<pre>" + esc(res.message || "") + "</pre>";
+    }).catch(function (e) {
+      el.className = "test-result err";
+      el.innerHTML = "✕ " + esc(String(e));
+    });
+  }
+
   // ------------------------------------------------------------ tabs
   function selectTab(which) {
     ["results", "fs", "coach"].forEach(function (t) {
@@ -594,6 +824,25 @@
   // ------------------------------------------------------------ chrome (buttons, timer, splitters, modal)
   function wireChrome() {
     $("btn-run").addEventListener("click", runCode);
+    $("btn-home").addEventListener("click", showMenu);
+    $("brand").addEventListener("click", showMenu);
+    $("btn-menu-coach").addEventListener("click", openCoachFromMenu);
+    $("btn-settings").addEventListener("click", showSettings);
+    $("btn-settings-back").addEventListener("click", showMenu);
+    $("cfg-save").addEventListener("click", saveEndpoint);
+    $("btn-test").addEventListener("click", testConnection);
+    $("btn-login").addEventListener("click", startLogin);
+    $("btn-logout").addEventListener("click", logout);
+    $("btn-recheck").addEventListener("click", loadAccount);
+    $("btn-login-code").addEventListener("click", submitLoginCode);
+    Array.prototype.forEach.call(document.querySelectorAll(".filter-btn"), function (b) {
+      b.addEventListener("click", function () {
+        menuFilter = b.dataset.filter;
+        Array.prototype.forEach.call(document.querySelectorAll(".filter-btn"),
+          function (x) { x.classList.toggle("active", x === b); });
+        renderCards();
+      });
+    });
     $("tab-results").addEventListener("click", function () { selectTab("results"); });
     $("tab-fs").addEventListener("click", function () { selectTab("fs"); });
     $("tab-coach").addEventListener("click", function () { selectTab("coach"); });

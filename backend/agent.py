@@ -23,6 +23,8 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +33,32 @@ DRILLS_DIR = os.path.join(HERE, "drills")
 SKILL_PATH = os.path.join(REPO, ".claude", "skills", "authoring-drills", "SKILL.md")
 VERIFY = os.path.join(HERE, "verify_drill.py")
 CLI_TIMEOUT = int(os.environ.get("REPS_CLI_TIMEOUT", "300"))
+CONFIG_PATH = os.path.join(REPO, ".reps-config.json")
+
+
+def load_config():
+    try:
+        with open(CONFIG_PATH) as fh:
+            return json.load(fh)
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def save_config(cfg):
+    with open(CONFIG_PATH, "w") as fh:
+        json.dump(cfg, fh, indent=2)
+    return cfg
+
+
+def _custom_endpoint():
+    """A user-configured OpenAI-compatible endpoint (vLLM / Ollama / LM Studio /
+    OpenRouter / …) from .reps-config.json, or None."""
+    e = load_config().get("endpoint") or {}
+    base = (e.get("base_url") or "").strip()
+    if not base:
+        return None
+    return (base.rstrip("/"), (e.get("api_key") or "none"),
+            (e.get("model") or "local-model"), (e.get("name") or "Local model"))
 
 # Env vars injected when running INSIDE a Claude Code session that would make a
 # nested agent CLI hit the wrong endpoint / fail auth. Stripped for children so
@@ -106,6 +134,8 @@ def detect_apis():
     apis = []
     if os.environ.get("ANTHROPIC_API_KEY"):
         apis.append("anthropic")
+    if _custom_endpoint():
+        apis.append("custom")
     if _openai_conf():
         apis.append("openai-compatible")
     return apis
@@ -116,6 +146,9 @@ def _display(pid):
         return CLI_AGENTS[pid]["name"]
     if pid == "anthropic":
         return "Anthropic API"
+    if pid == "custom":
+        c = _custom_endpoint()
+        return (c[3] + " (vLLM / OpenAI-compatible)") if c else "Local model"
     if pid == "openai-compatible":
         conf = _openai_conf()
         return conf[3] if conf else "OpenAI-compatible"
@@ -130,10 +163,10 @@ def available():
 
 
 def active_provider(override=None):
-    pid = override or os.environ.get("REPS_PROVIDER")
     ids = {p["id"] for p in available()}
-    if pid and pid in ids:
-        return pid
+    for cand in (override, load_config().get("provider"), os.environ.get("REPS_PROVIDER")):
+        if cand and cand in ids:
+            return cand
     clis, apis = detect_clis(), detect_apis()
     if clis:
         return clis[0]
@@ -285,12 +318,144 @@ def _generate_api(pid, slug, topic, level, extra):
 def _api_text(pid, system, user):
     if pid == "anthropic":
         return _anthropic_text(system, user)
-    if pid == "openai-compatible":
-        conf = _openai_conf()
-        if not conf:
-            return {"ok": False, "error": "no OpenAI-compatible API key set", "text": ""}
+    conf = _custom_endpoint() if pid == "custom" else (
+        _openai_conf() if pid == "openai-compatible" else None)
+    if conf:
         return _openai_text(system, user, conf)
-    return {"ok": False, "error": f"unknown API provider '{pid}'", "text": ""}
+    return {"ok": False, "error": f"provider '{pid}' is not configured", "text": ""}
+
+
+# ============================================================ in-app CLI login
+# So the user can sign a CLI agent in/out from the Settings page instead of a
+# terminal. `claude` exposes `auth status|login|logout`; login runs in the
+# background so we can surface its auth URL and poll for completion.
+_logins = {}  # pid -> {proc, lines, url, done, rc}
+
+
+def _login_cmd(pid):
+    spec = CLI_AGENTS.get(pid)
+    if not spec:
+        return None
+    if pid == "claude":
+        return [spec["bin"], "auth", "login", "--claudeai"]
+    return [spec["bin"], "login"]      # best-effort for other CLIs
+
+
+def cli_login_status(pid="claude"):
+    spec = CLI_AGENTS.get(pid)
+    if not spec:
+        return {"supported": False, "provider": pid}
+    if pid != "claude":
+        return {"supported": True, "provider": pid, "loggedIn": None,
+                "note": "Sign this CLI in from a terminal if it isn't already."}
+    try:
+        proc = subprocess.run([spec["bin"], "auth", "status", "--json"],
+                              capture_output=True, text=True, env=_child_env(), timeout=25)
+        data = json.loads(proc.stdout or "{}")
+        return {"supported": True, "provider": pid,
+                "loggedIn": bool(data.get("loggedIn")),
+                "email": data.get("email"),
+                "subscription": data.get("subscriptionType")}
+    except Exception as exc:  # noqa: BLE001
+        return {"supported": True, "provider": pid, "loggedIn": None, "error": str(exc)}
+
+
+def _login_reader(pid, proc):
+    st = _logins[pid]
+    try:
+        for line in iter(proc.stdout.readline, ""):
+            st["lines"].append(line)
+            if not st["url"]:
+                m = re.search(r"https?://[^\s]+", line)
+                if m:
+                    st["url"] = m.group(0).rstrip(").,'\"")
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
+        try:
+            proc.wait()
+        except Exception:  # noqa: BLE001
+            pass
+        st["done"] = True
+        st["rc"] = proc.returncode
+
+
+def cli_login_start(pid="claude"):
+    cmd = _login_cmd(pid)
+    if not cmd:
+        return {"ok": False, "error": f"login not supported for '{pid}'"}
+    prev = _logins.get(pid)
+    if prev and prev["proc"].poll() is None:
+        try:
+            prev["proc"].terminate()
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, bufsize=1,
+                                env=_child_env(), cwd=REPO)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+    _logins[pid] = {"proc": proc, "lines": [], "url": None, "done": False, "rc": None}
+    threading.Thread(target=_login_reader, args=(pid, proc), daemon=True).start()
+    for _ in range(60):                       # wait up to ~6s for an auth URL to appear
+        st = _logins[pid]
+        if st["url"] or st["done"]:
+            break
+        time.sleep(0.1)
+    st = _logins[pid]
+    return {"ok": True, "provider": pid, "url": st["url"], "done": st["done"],
+            "output": "".join(st["lines"])[-1200:]}
+
+
+def cli_login_poll(pid="claude"):
+    st = _logins.get(pid)
+    if not st:
+        return {"active": False, "status": cli_login_status(pid)}
+    return {"active": st["proc"].poll() is None, "url": st["url"], "done": st["done"],
+            "output": "".join(st["lines"])[-1200:], "status": cli_login_status(pid)}
+
+
+def cli_login_code(pid="claude", code=""):
+    st = _logins.get(pid)
+    if not st or st["proc"].poll() is not None:
+        return {"ok": False, "error": "no login in progress"}
+    try:
+        st["proc"].stdin.write(code.strip() + "\n")
+        st["proc"].stdin.flush()
+        return {"ok": True}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+
+
+def cli_logout(pid="claude"):
+    spec = CLI_AGENTS.get(pid)
+    if not spec or pid != "claude":
+        return {"ok": False, "error": "not supported"}
+    try:
+        subprocess.run([spec["bin"], "auth", "logout"], capture_output=True, text=True,
+                       env=_child_env(), timeout=25)
+        return {"ok": True}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)}
+
+
+def test_provider(pid=None):
+    """Minimal round-trip so the Settings page can show a real connect/fail."""
+    pid = active_provider(pid)
+    name = _display(pid)
+    if pid == "mock":
+        return {"ok": True, "provider": pid, "name": name,
+                "message": "Offline sample generator — always available (no real model)."}
+    if pid in CLI_AGENTS:
+        r = _run_cli(pid, "Reply with exactly: OK", read_only=True)
+        return {"ok": bool(r.get("ok")), "provider": pid, "name": name,
+                "message": (f"{name} responded." if r.get("ok")
+                            else (r.get("error") or "no response"))[:600]}
+    r = _api_text(pid, "You are a connection test.", "Reply with exactly: OK")
+    return {"ok": bool(r.get("ok")), "provider": pid, "name": name,
+            "message": (f"{name} responded: " + (r.get("text") or "").strip()[:80]
+                        if r.get("ok") else (r.get("error") or "no response"))[:600]}
 
 
 def _anthropic_text(system, user):

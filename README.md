@@ -13,18 +13,28 @@ ships it once it passes its own verification.
 
 ---
 
-## Quick start
+## Install
 
 ```bash
-git clone https://github.com/rrrozhd/reps && cd reps
-./run.sh                     # uses uv if present; else pip + uvicorn
-# open http://127.0.0.1:8777
+curl -fsSL https://raw.githubusercontent.com/rrrozhd/reps/main/install.sh | sh
+reps
 ```
 
-Or one line:
+That installs a global **`reps`** command (app lives in `~/.reps`, linked onto
+your PATH — no directories to manage). First run walks you through the coach
+engine — sign in to a CLI agent (`claude auth login`, native), point at a local
+model (vLLM / Ollama), or paste an API key — then opens http://127.0.0.1:8777.
+
+- **`reps`** — start (runs first-time setup automatically)
+- **`reps setup`** — pick / switch engines, sign in
+- **`reps status`** — show the active engine
+
+Reconfigure later from the terminal (`reps setup`) or the in-app **⚙ Settings**.
+
+**From source instead:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rrrozhd/reps/main/install.sh | bash
+git clone https://github.com/rrrozhd/reps && cd reps && ./reps
 ```
 
 > The editor loads Monaco from a CDN (jsDelivr), so the browser needs internet.
