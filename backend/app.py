@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FRONTEND = os.path.normpath(os.path.join(HERE, "..", "frontend"))
+ASSETS = os.path.normpath(os.path.join(HERE, "..", "assets"))
 WORKER = os.path.join(HERE, "worker.py")
 SOLUTIONS_DIR = os.path.normpath(os.path.join(HERE, "..", ".solutions"))
 RUN_TIMEOUT = 15  # seconds — kills runaway loops in a submission
@@ -335,5 +336,8 @@ def put_config(body: ConfigBody):
     return {"ok": True}
 
 
-# Static frontend last, so /api/* wins.
+# Brand assets (logo, favicon) — single source of truth shared with the README.
+app.mount("/assets", StaticFiles(directory=ASSETS), name="assets")
+
+# Static frontend last, so /api/* and /assets/* win.
 app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="static")

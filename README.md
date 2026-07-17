@@ -1,7 +1,20 @@
-# reps
+<p align="center">
+  <img src="assets/reps-dark.svg" alt="reps" width="300" />
+</p>
 
-**Coding-interview practice with a real editor, a verifying runner, and an agent
-coach that generates and explains problems — all from the browser.**
+<p align="center">
+  <strong>Coding-interview practice with a real editor, a verifying runner, and an
+  agent coach that generates and explains problems — all from the browser.</strong>
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#the-coach-generate--explain-from-the-ui">The Coach</a> ·
+  <a href="#the-problem-library">Problems</a> ·
+  <a href="LICENSE">MIT</a>
+</p>
+
+---
 
 reps is a local, CodeSignal-style harness for **progressive** coding problems
 (one problem, several levels, each bolting a new requirement onto the same

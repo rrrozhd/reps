@@ -8,8 +8,8 @@
   --text: #d7dde5;
   --text-dim: #8b98a7;
   --text-faint: #667080;
-  --accent: #ffe14d;      /* accent yellow */
-  --accent-ink: #1a1500;
+  --accent: #42c586;      /* brand green (the dark-UI variant from reps-dark.svg) */
+  --accent-ink: #16161a;  /* brand black — text/icons on accent fills */
   --green: #3fb950;
   --green-bg: #12261a;
   --red: #f85149;
@@ -50,15 +50,18 @@ kbd {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   height: 52px;
   padding: 0 16px;
   background: linear-gradient(180deg, var(--bg-3), var(--bg-2));
   border-bottom: 1px solid var(--edge);
   flex: 0 0 auto;
 }
-.brand { display: flex; align-items: baseline; gap: 8px; }
-.logo { color: var(--accent); font-size: 18px; transform: translateY(1px); }
+/* Toolbar chrome must never shrink-and-wrap; the title truncates instead. */
+.topbar > *, .wb-controls > * { flex: 0 0 auto; }
+.topbar .btn, .topbar .pill, .brand-name, .brand-sub { white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: 9px; }
+.logo { height: 17px; width: auto; display: block; flex: 0 0 auto; }
 .brand-name { font-weight: 700; letter-spacing: .2px; }
 .brand-sub { color: var(--text-faint); font-size: 12px; }
 
@@ -151,13 +154,21 @@ kbd {
 .btn.primary kbd {
   background: rgba(0,0,0,.16);
   border-color: rgba(0,0,0,.2);
-  color: rgba(26,21,0,.72);
+  color: rgba(22,22,26,.72);
 }
 .btn.primary.running { opacity: .7; pointer-events: none; }
 
 /* ---------------- header extras ---------------- */
 .brand { cursor: pointer; }
-.current-title { font-weight: 700; font-size: 15px; }
+.current-title {
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30ch;
+  flex: 0 1 auto;          /* the only thing allowed to give, via ellipsis */
+}
 #btn-home { margin-right: 2px; }
 
 /* ---------------- problem menu ---------------- */
@@ -766,6 +777,10 @@ textarea.coach-input { font-family: var(--mono); font-size: 12px; }
   box-shadow: 0 10px 30px rgba(0,0,0,.4);
 }
 
-@media (max-width: 1000px) {
-  .brand-sub, .drill-picker .pill { display: none; }
+/* The workbench toolbar is dense; drop decorative bits before anything wraps. */
+@media (max-width: 1280px) {
+  .brand-sub { display: none; }
+}
+@media (max-width: 1100px) {
+  #drill-diff { display: none; }
 }
