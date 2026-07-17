@@ -93,7 +93,6 @@ export default function App() {
         <div className="brand" id="brand" title="Back to problems" onClick={goHome}>
           <img className="logo" src="/assets/reps-mark-dark.svg" alt="" width="156" height="66" />
           <span className="brand-name">reps</span>
-          <span className="brand-sub">interview practice</span>
         </div>
 
         {inWorkbench && (
