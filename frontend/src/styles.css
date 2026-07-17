@@ -30,9 +30,17 @@ body {
   color: var(--text);
   font-family: var(--sans);
   font-size: 14px;
+  overflow: hidden;
+}
+/* React mounts the app here. It must be the flex column that fills the
+   viewport, so the topbar stays fixed-height and scrollable views
+   (.menu, .settings) get a bounded height to scroll inside — otherwise
+   #root grows to content height and body's overflow:hidden clips it. */
+#root {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0;
 }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 kbd {
